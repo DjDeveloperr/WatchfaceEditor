@@ -1,0 +1,131 @@
+:root {
+  /* Colors */
+  --bg-main: #1E1E1E;
+  --bg-explorer: #252526;
+  --bg-button: #2D2D2D;
+  --bg-button-hover: #333333;
+  --white: #F5F5F5;
+
+  /* Variables */
+  --explorer-width: 240px;
+  --renderer-options-width: 240px;
+  --resources-height: 240px;
+}
+
+body {
+  font-family: sans-serif;
+  color: var(--white);
+}
+
+#editor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  overflow: hidden;
+  background-color: var(--bg-main);
+}
+
+#editor .project, #editor .options {
+  padding: 5px;
+}
+
+#explorer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: var(--explorer-width);
+  background-color: var(--bg-explorer);
+}
+
+#explorer > div {
+  --margin: 10px;
+  margin-top: var(--margin);
+  margin-bottom: var(--margin);
+}
+
+#resources {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: calc(100% - var(--explorer-width));
+  --border: 1px;
+  height: calc(var(--resources-height) - var(--border));
+  border-top: solid var(--border) #E7E7E7;
+}
+
+#renderer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: calc(100% - var(--explorer-width));
+  background-color: var(--bg-main);
+  height: calc(100% - var(--resources-height));
+}
+
+#renderer-view {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: var(--bg-main);
+  width: calc(100% - var(--renderer-options-width));
+  height: 100%;
+}
+
+#renderer-options {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  background-color: var(--bg-explorer);
+  width: var(--renderer-options-width);
+}
+
+.button {
+  display: inline;
+  border: none;
+  border-radius: 8px;
+  padding: 6px;
+  margin: 3px;
+  font-size: 16px;
+  color: var(--white);
+  background-color: var(--bg-button);
+  width: auto;
+  cursor: pointer;
+}
+
+.button:hover {
+  background-color: var(--bg-button-hover);
+}
+
+.button .icon {
+  --pad: 4px;
+  margin: var(--pad);
+  height: calc(100% - var(--pad));
+  width: auto;
+}
+
+.button .label {
+  text-align: center;
+}
+
+.bold {
+  font-weight: bold;
+}
+
+.divider {
+  width: 100%;
+  height: 1px;
+  background-color: var(--white);
+  display: block;
+  --margin: 3px;
+  margin-top: var(--margin);
+  margin-bottom: var(--margin);
+}
+
+span {
+  padding: 3px;
+}
