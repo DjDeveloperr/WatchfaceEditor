@@ -1,28 +1,86 @@
-const SIGN_STRING = "HMDIAL";
-var ParamFlag;
+const SIGN_SIZE1 = 32;
+const SIGN_STRING1 = "HMDIAL";
+var ParamFlag1;
 (function(ParamFlag) {
     ParamFlag[ParamFlag["NONE"] = 0] = "NONE";
     ParamFlag[ParamFlag["UNKNOWN"] = 1] = "UNKNOWN";
     ParamFlag[ParamFlag["HAS_CHILDREN"] = 2] = "HAS_CHILDREN";
     ParamFlag[ParamFlag["UNKNOWN2"] = 4] = "UNKNOWN2";
-})(ParamFlag || (ParamFlag = {
+})(ParamFlag1 || (ParamFlag1 = {
 }));
-var ResourceType;
+var ResourceType1;
 (function(ResourceType) {
     ResourceType[ResourceType["PALETTE"] = 0] = "PALETTE";
     ResourceType[ResourceType["BIT_8"] = 1] = "BIT_8";
     ResourceType[ResourceType["BIT_16"] = 2] = "BIT_16";
     ResourceType[ResourceType["BIT_24"] = 3] = "BIT_24";
     ResourceType[ResourceType["BIT_32"] = 4] = "BIT_32";
-})(ResourceType || (ResourceType = {
+})(ResourceType1 || (ResourceType1 = {
 }));
-var BandType;
+var BandType1;
 (function(BandType) {
     BandType[BandType["BAND_4"] = 345] = "BAND_4";
     BandType[BandType["BAND_5"] = 146] = "BAND_5";
     BandType[BandType["BAND_6"] = 148] = "BAND_6";
-})(BandType || (BandType = {
+})(BandType1 || (BandType1 = {
 }));
+const BAND_DIMS1 = {
+    [BandType1.BAND_4]: [
+        120,
+        240
+    ],
+    [BandType1.BAND_5]: [
+        126,
+        294
+    ],
+    [BandType1.BAND_6]: [
+        152,
+        486
+    ]
+};
+export { SIGN_SIZE1 as SIGN_SIZE };
+export { SIGN_STRING1 as SIGN_STRING };
+export { ParamFlag1 as ParamFlag,  };
+export { ResourceType1 as ResourceType,  };
+export { BandType1 as BandType,  };
+export { BAND_DIMS1 as BAND_DIMS };
+function render1({ band , params , resources  }, state = {
+    date: new Date(),
+    steps: 100,
+    goal: 1000,
+    battery: 100,
+    calories: 100,
+    lock: true,
+    dnd: true,
+    bluetooth: true,
+    distance: 100,
+    pai: 100,
+    silent: true,
+    weather: 0
+}) {
+    const dim = BAND_DIMS1[band];
+    const data = new Uint8Array(dim[0] * dim[1] * 4);
+    function getImage(rid) {
+        return resources.find((e)=>e.id === Number(rid)
+        ).data;
+    }
+    function putImage(img, x, y) {
+        data.set(img, (Number(y) * dim[0] + Number(x)) * 4);
+    }
+    if (params.background) {
+        if (params.background.image) {
+            const { x , y , imageIndex  } = params.background.image;
+            const img = getImage(imageIndex);
+            putImage(img, x, y);
+        }
+    }
+    return {
+        width: dim[0],
+        height: dim[1],
+        data
+    };
+}
+export { render1 as render };
 let ident = 0;
 const hex = (n)=>"0x" + n.toString(16).padStart(2, "0").toUpperCase()
 ;
@@ -817,6 +875,76 @@ function mapParams(params) {
     decrIdent();
     return res;
 }
+const converters = {
+    array: {
+        encode: (v)=>v
+        ,
+        decode: (v)=>v
+    },
+    bool: {
+        encode: (v)=>Boolean(v)
+        ,
+        decode: (v)=>BigInt(v)
+    },
+    color: {
+        encode: (v)=>v
+        ,
+        decode: (v)=>v
+    },
+    unknown: {
+        encode: (v)=>v
+        ,
+        decode: (v)=>v
+    }
+};
+function reverseMapParams(params) {
+    trace("Reverse Mapped Params");
+    const table = {
+    };
+    function processMapped(name, value, into = table, getMapEntry = (name)=>Object.entries(ParameterMap).find((e)=>e[1].name === name
+        )
+    ) {
+        const mapEntry = getMapEntry(name);
+        if (!mapEntry) {
+            throw new Error(`Invalid parameter name: ${name}`);
+        }
+        const [id, map] = mapEntry;
+        if (typeof value === "string" || typeof value === "number" || typeof value === "bigint") {
+            if (Array.isArray(into)) {
+                into.push({
+                    id: Number(id),
+                    value: BigInt(converters[map.type ?? "unknown"].decode(value)),
+                    flags: 0,
+                    children: []
+                });
+            } else {
+                throw new Error("Invalid param value at top level");
+            }
+        } else if (typeof value === "object") {
+            const res = [];
+            Object.entries(value).forEach(([k, v])=>{
+                processMapped(k, v, res, (name)=>Object.entries(map.children || {
+                    }).find((e)=>e[1].name === name
+                    )
+                );
+            });
+            if (Array.isArray(into)) {
+                into.push({
+                    id: Number(id),
+                    value: BigInt(0),
+                    flags: 0,
+                    children: res
+                });
+            } else {
+                into[Number(id)] = res;
+            }
+        } else throw new Error("Invalid type: " + typeof value);
+    }
+    Object.entries(params).forEach(([k, v])=>{
+        processMapped(k, v);
+    });
+    return table;
+}
 function totalParamSize(param) {
     let res = 0n;
     res += BigInt(param.size);
@@ -1457,7 +1585,7 @@ class WatchfaceParser {
         trace("Parsed Header.");
         trace("  Sign:", header.sign);
         trace("  ParamSIze:", header.paramsSize);
-        trace("  Band:", BandType[header.band]);
+        trace("  Band:", BandType1[header.band]);
         trace("Parsing Param (Descriptor) List, Offset:", this.#offset);
         incrIdent();
         const params = this.parseParamList(BigInt(header.paramsSize));
@@ -1529,7 +1657,7 @@ class WatchfaceParser {
         if (sign === "UIHH\x01") {
             this.#offset = 79;
         } else {
-            assertEquals(sign, SIGN_STRING);
+            assertEquals(sign, SIGN_STRING1);
             const restSignAreaLength = 32 - (sign.length + 1);
             const restSignArea = new Uint8Array(this.#bin.buffer, this.#offset, restSignAreaLength);
             assertEquals(restSignArea.every((v)=>v === 255
@@ -1575,7 +1703,7 @@ class WatchfaceParser {
         value |= BigInt(i & 127) << BigInt(offset);
         size++;
         trace("  Value:", value);
-        if ((flags & ParamFlag.HAS_CHILDREN) === ParamFlag.HAS_CHILDREN) {
+        if ((flags & ParamFlag1.HAS_CHILDREN) === ParamFlag1.HAS_CHILDREN) {
             trace("Has Children. Parsing");
             incrIdent();
             children = this.parseParamList(value);
@@ -1623,7 +1751,7 @@ class WatchfaceParser {
             }
         }
         let data;
-        if (header.type === ResourceType.PALETTE) {
+        if (header.type === ResourceType1.PALETTE) {
             assertExists(palette);
             data = new Uint8Array(header.width * header.height * 4);
             trace("Start Reading Palette Image at:", this.#offset);
@@ -1643,7 +1771,7 @@ class WatchfaceParser {
                     ], (y * header.width + x) * 4);
                 }
             }
-        } else if (header.type === ResourceType.BIT_8) {
+        } else if (header.type === ResourceType1.BIT_8) {
             data = new Uint8Array(header.width * header.height * 4);
             for(let y = 0; y < header.height; y++){
                 for(let x = 0; x < header.width; x++){
@@ -1656,7 +1784,7 @@ class WatchfaceParser {
                     ], (y * header.width + x) * 4);
                 }
             }
-        } else if (header.type === ResourceType.BIT_16) {
+        } else if (header.type === ResourceType1.BIT_16) {
             data = new Uint8Array(header.width * header.height * 4);
             for(let y = 0; y < header.height; y++){
                 for(let x = 0; x < header.width; x++){
@@ -1673,7 +1801,7 @@ class WatchfaceParser {
                     ], (y * header.width + x) * 4);
                 }
             }
-        } else if (header.type === ResourceType.BIT_24) {
+        } else if (header.type === ResourceType1.BIT_24) {
             data = new Uint8Array(header.width * header.height * 4);
             for(let y = 0; y < header.height; y++){
                 for(let x = 0; x < header.width; x++){
@@ -1692,7 +1820,7 @@ class WatchfaceParser {
                     ], (y * header.width + x) * 4);
                 }
             }
-        } else if (header.type === ResourceType.BIT_32) {
+        } else if (header.type === ResourceType1.BIT_32) {
             data = new Uint8Array(header.width * header.height * 4);
             for(let y = 0; y < header.height; y++){
                 for(let x = 0; x < header.width; x++){
@@ -1732,20 +1860,20 @@ class WatchfaceParser {
         this.#offset += 2;
         let type;
         if (paletteColors > 0) {
-            type = ResourceType.PALETTE;
+            type = ResourceType1.PALETTE;
         } else {
             switch(bitsPerPixel){
                 case 8:
-                    type = ResourceType.BIT_8;
+                    type = ResourceType1.BIT_8;
                     break;
                 case 16:
-                    type = ResourceType.BIT_16;
+                    type = ResourceType1.BIT_16;
                     break;
                 case 24:
-                    type = ResourceType.BIT_24;
+                    type = ResourceType1.BIT_24;
                     break;
                 case 32:
-                    type = ResourceType.BIT_32;
+                    type = ResourceType1.BIT_32;
                     break;
                 default:
                     throw new Error("Invalid resource type");
@@ -1770,6 +1898,10 @@ class WatchfaceParser {
         };
     }
 }
+function parse1(buffer) {
+    return new WatchfaceParser(buffer).parse();
+}
+export { parse1 as parse };
 class Writer extends Array {
     writeCString(str) {
         this.push(...new TextEncoder().encode(str), 0);
@@ -1785,10 +1917,10 @@ class Writer extends Array {
     }
     writeHeader(paramSize, band) {
         trace("Writing Header");
-        if (band === BandType.BAND_4) {
-            const written = this.writeCString(SIGN_STRING);
+        if (band === BandType1.BAND_4) {
+            const written = this.writeCString(SIGN_STRING1);
             for(let i = 0; i < 32 - written; i++)this.push(255);
-        } else if (band === BandType.BAND_6 || band === BandType.BAND_5) {
+        } else if (band === BandType1.BAND_6 || band === BandType1.BAND_5) {
             const header = new Uint8Array([
                 85,
                 73,
@@ -1870,7 +2002,7 @@ class Writer extends Array {
                 255,
                 255, 
             ]);
-            if (band === BandType.BAND_5) {
+            if (band === BandType1.BAND_5) {
                 header.set([
                     17,
                     13,
@@ -1888,7 +2020,7 @@ class Writer extends Array {
                     5,
                     0
                 ], 22);
-            } else if (band === BandType.BAND_6) {
+            } else if (band === BandType1.BAND_6) {
                 const randomBytes1 = new Uint8Array(2);
                 const randomBytes2 = new Uint8Array(2);
                 crypto.getRandomValues(randomBytes1);
@@ -1898,7 +2030,7 @@ class Writer extends Array {
             }
             this.push(...header);
         } else throw new Error(`Invalid Band Type: ${band}`);
-        trace("  Band:", BandType[band]);
+        trace("  Band:", BandType1[band]);
         this.writeUint32LE(band);
         trace("  Param Size:", paramSize);
         this.writeUint32LE(paramSize);
@@ -1907,7 +2039,7 @@ class Writer extends Array {
         trace("Write Param, curent offset:", this.length);
         trace("  ID:", id);
         trace("  Value:", value);
-        const flags = children && children.length ? ParamFlag.HAS_CHILDREN : ParamFlag.NONE;
+        const flags = children && children.length ? ParamFlag1.HAS_CHILDREN : ParamFlag1.NONE;
         const rawID = id << 3 | flags;
         trace("  Raw ID:", rawID);
         this.push(rawID);
@@ -1980,13 +2112,13 @@ class Writer extends Array {
             }
         }
         switch(type){
-            case ResourceType.BIT_8:
+            case ResourceType1.BIT_8:
                 for(let i = 0; i < res.data.length; i += 4){
                     this.push(res.data[i]);
                     size++;
                 }
                 break;
-            case ResourceType.BIT_16:
+            case ResourceType1.BIT_16:
                 for(let i1 = 0; i1 < res.data.length; i1 += 4){
                     const r = res.data[i1];
                     const g = res.data[i1 + 1];
@@ -2000,7 +2132,7 @@ class Writer extends Array {
                     size += 2;
                 }
                 break;
-            case ResourceType.BIT_24:
+            case ResourceType1.BIT_24:
                 for(let i2 = 0; i2 < res.data.length; i2 += 4){
                     const r = res.data[i2];
                     const g = res.data[i2 + 1];
@@ -2013,7 +2145,7 @@ class Writer extends Array {
                     size += 3;
                 }
                 break;
-            case ResourceType.BIT_32:
+            case ResourceType1.BIT_32:
                 for(let i3 = 0; i3 < res.data.length; i3 += 4){
                     const r = res.data[i3];
                     const g = res.data[i3 + 1];
@@ -2023,7 +2155,7 @@ class Writer extends Array {
                     size += 4;
                 }
                 break;
-            case ResourceType.PALETTE:
+            case ResourceType1.PALETTE:
                 for(let i4 = 0; i4 < res.data.length; i4 += 4){
                     let r = res.data[i4];
                     let g = res.data[i4 + 1];
@@ -2042,7 +2174,7 @@ class Writer extends Array {
     getResourceInfo(data, height, width) {
         assertEquals(data.byteLength % 4, 0);
         const res = {
-            type: ResourceType.BIT_32,
+            type: ResourceType1.BIT_32,
             bits: 32,
             transparency: 0,
             palette: []
@@ -2075,7 +2207,7 @@ class Writer extends Array {
         const pixels = width * height;
         const possible = [
             {
-                type: ResourceType.BIT_32,
+                type: ResourceType1.BIT_32,
                 bits: 32,
                 size: 4 * pixels
             }, 
@@ -2085,21 +2217,21 @@ class Writer extends Array {
         const bits = this.getPossibleBits(res.palette);
         if (bits.includes(8) && index < 0) {
             possible.push({
-                type: ResourceType.BIT_8,
+                type: ResourceType1.BIT_8,
                 bits: 8,
                 size: pixels
             });
         }
         if (bits.includes(16) && index < 0) {
             possible.push({
-                type: ResourceType.BIT_16,
+                type: ResourceType1.BIT_16,
                 bits: 16,
                 size: pixels * 2
             });
         }
         if (bits.includes(24) && index < 0) {
             possible.push({
-                type: ResourceType.BIT_24,
+                type: ResourceType1.BIT_24,
                 bits: 24,
                 size: pixels * 3
             });
@@ -2107,7 +2239,7 @@ class Writer extends Array {
         if (res.palette.length <= 256 && res.palette.filter((e)=>e.a === 0
         ).length <= 1) {
             possible.push({
-                type: ResourceType.PALETTE,
+                type: ResourceType1.PALETTE,
                 bits: 8,
                 size: res.palette.length * 4 + pixels
             });
@@ -2117,7 +2249,7 @@ class Writer extends Array {
         const fmt = possible[0];
         res.type = fmt.type;
         res.bits = fmt.bits;
-        if (res.type === ResourceType.PALETTE) {
+        if (res.type === ResourceType1.PALETTE) {
             if (index > -1) {
                 const [color] = res.palette.splice(index, 1);
                 res.palette.unshift(color);
@@ -2128,7 +2260,7 @@ class Writer extends Array {
             type: res.type,
             bits: res.bits,
             transparency: res.transparency,
-            palette: res.type === ResourceType.PALETTE ? res.palette.map((e)=>({
+            palette: res.type === ResourceType1.PALETTE ? res.palette.map((e)=>({
                     r: e.r,
                     g: e.g,
                     b: e.b,
@@ -2162,3 +2294,69 @@ class Writer extends Array {
         return new Uint8Array(this);
     }
 }
+function pack1({ params: mappedParams , resources , band  }) {
+    const params = reverseMapParams(mappedParams);
+    const data = new Writer();
+    const paramDescriptors = new Writer();
+    const paramTable = new Writer();
+    for (const [id, value] of Object.entries(params)){
+        let offset = paramTable.length;
+        let size = 0;
+        trace("Write Param Table for", id);
+        incrIdent();
+        for (const e of value){
+            const psize = paramTable.writeParam(e);
+            trace("Add size", psize);
+            size += psize;
+        }
+        decrIdent();
+        trace("Write Param Desc with offset:", offset, "and size:", size);
+        paramDescriptors.writeParam({
+            id: Number(id),
+            children: [
+                {
+                    id: 1,
+                    value: BigInt(offset)
+                },
+                {
+                    id: 2,
+                    value: BigInt(size)
+                }, 
+            ]
+        });
+    }
+    const mainParam = new Writer();
+    trace("Write Main Param");
+    incrIdent();
+    mainParam.writeParam({
+        id: 1,
+        children: [
+            {
+                id: 1,
+                value: BigInt(paramTable.length)
+            },
+            {
+                id: 2,
+                value: BigInt(resources.length)
+            }, 
+        ]
+    });
+    decrIdent();
+    trace("Written!");
+    data.writeHeader(mainParam.length + paramDescriptors.length, band);
+    data.push(...mainParam, ...paramDescriptors);
+    data.push(...paramTable);
+    const resourceOffsets = new Writer();
+    const res = new Writer();
+    let offset = 0;
+    for (const resource of resources){
+        resourceOffsets.writeUint32LE(offset);
+        offset += res.writeResource(resource);
+    }
+    data.push(...resourceOffsets);
+    const u8 = new Uint8Array(data.length + res.length);
+    u8.set(data, 0);
+    u8.set(res, data.length);
+    return u8;
+}
+export { pack1 as pack };
