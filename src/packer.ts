@@ -123,7 +123,11 @@ class Writer extends Array<number> {
       size += valsize;
       trace("  Value Size:", valsize);
     } else {
-      throw new Error("Invalid param " + Deno.inspect({ id, value, children }));
+      throw new Error(
+        "Invalid param " + "Deno" in globalThis
+          ? Deno.inspect({ id, value, children })
+          : JSON.stringify({ id, value, children }, null, 2),
+      );
     }
 
     return size;

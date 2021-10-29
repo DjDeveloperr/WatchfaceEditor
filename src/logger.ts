@@ -4,7 +4,7 @@ export const hex = (n: number | bigint) =>
   "0x" + n.toString(16).padStart(2, "0").toUpperCase();
 
 export const trace = (...args: any[]) =>
-  Deno.env.get("TRACE") === "1" && console.log(
+  globalThis.Deno?.env.get("TRACE") === "1" && console.log(
     "[Trace]" +
       "  ".repeat(ident),
     ...args.map((e) => {

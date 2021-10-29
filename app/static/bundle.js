@@ -84,7 +84,7 @@ export { render1 as render };
 let ident = 0;
 const hex = (n)=>"0x" + n.toString(16).padStart(2, "0").toUpperCase()
 ;
-const trace = (...args)=>Deno.env.get("TRACE") === "1" && console.log("[Trace]" + "  ".repeat(ident), ...args.map((e)=>{
+const trace = (...args)=>globalThis.Deno?.env.get("TRACE") === "1" && console.log("[Trace]" + "  ".repeat(ident), ...args.map((e)=>{
         return typeof e === "number" || typeof e === "bigint" ? `${e} (${hex(e)})` : e;
     }))
 ;
@@ -859,7 +859,7 @@ function mapParams(params) {
                 if (e.children && e.children.length !== 0 && (!m.children || !e.children.every((ch)=>ch.id in (m.children || {
                     })
                 ))) {
-                    throw new Error(`Param has Children but Map layout doesn't. Map: ${_map.name}.${m.name}, Element: ${Deno.inspect(e)} ${Boolean(e.children)}, ${e.children.length !== 0}, (${!m.children}, ${!e.children.every((ch)=>ch.id in (m.children || {
+                    throw new Error(`Param has Children but Map layout doesn't. Map: ${_map.name}.${m.name}, Element: ${"Deno" in globalThis ? Deno.inspect(e) : JSON.stringify(e, null, 2)} ${Boolean(e.children)}, ${e.children.length !== 0}, (${!m.children}, ${!e.children.every((ch)=>ch.id in (m.children || {
                         })
                     )})`);
                 }
@@ -2062,11 +2062,15 @@ class Writer extends Array {
             size += valsize;
             trace("  Value Size:", valsize);
         } else {
-            throw new Error("Invalid param " + Deno.inspect({
+            throw new Error("Invalid param " + "Deno" in globalThis ? Deno.inspect({
                 id,
                 value,
                 children
-            }));
+            }) : JSON.stringify({
+                id,
+                value,
+                children
+            }, null, 2));
         }
         return size;
     }

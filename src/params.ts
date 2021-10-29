@@ -457,7 +457,9 @@ export function mapParams(params: ParamTable): MappedParamTable {
         ) {
           throw new Error(
             `Param has Children but Map layout doesn't. Map: ${_map.name}.${m.name}, Element: ${
-              Deno.inspect(e)
+              "Deno" in globalThis
+                ? Deno.inspect(e)
+                : JSON.stringify(e, null, 2)
             } ${Boolean(e.children)}, ${e.children.length !== 0}, (${!m
               .children}, ${!e.children.every((ch) =>
                 ch.id in (m.children || {})
